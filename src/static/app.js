@@ -38,7 +38,11 @@ document.addEventListener("DOMContentLoaded", () => {
                   (p) =>
                     `<li><span class="participant-dot" aria-hidden="true"></span><span class="participant-name">${escapeHtml(
                       p
-                    )}</span></li>`
+                    )}</span><button class="participant-delete" data-activity="${escapeHtml(
+                      name
+                    )}" data-email="${escapeHtml(p)}" aria-label="Unregister ${escapeHtml(
+                      p
+                    )}">&times;</button></li>`
                 )
                 .join("")
             : `<li class="no-participants">No participants yet</li>`;
@@ -114,4 +118,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize app
   fetchActivities();
+
+  // Event delegation for unregister buttons
+  activitiesList.addEventListener("click", async (event) => {
+    const btn = event.target.closest(".participant-delete");
+    if (!btn) return;
+
+    const activity = btn.dataset.activity;
+    const email = btn.dataset.email;
+
+    if (!activity || !email) return;
+
+    try {
+      const response = await fetch(
+        `/activities/${encodeURIComponent(activity)}/participants?email=${encodeURIComponent(
+          email
+        )}`,
+        { method: "DELETE" }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        messageDiv.textContent = result.message;
+        messageDiv.className = "success";
+        // refresh activities list
+        fetchActivities();
+      } else {
+        messageDiv.textContent = result.detail || "Failed to unregister";
+        messageDiv.className = "error";
+      }
+
+      messageDiv.classList.remove("hidden");
+      setTimeout(() => messageDiv.classList.add("hidden"), 5000);
+    } catch (error) {
+      messageDiv.textContent = "Failed to unregister. Please try again.";
+      messageDiv.className = "error";
+      messageDiv.classList.remove("hidden");
+      console.error("Error unregistering:", error);
+    }
+  });
 });
